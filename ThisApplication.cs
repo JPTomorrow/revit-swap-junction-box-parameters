@@ -12,9 +12,7 @@ using Autodesk.Revit.DB;
 using Autodesk.Revit.UI.Selection;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text.RegularExpressions;
-using JPMorrow.Tools.Revit;
-using JPMorrow.Custom.Revit.Documents;
+using JPMorrow.Revit.Documents;
 
 namespace MainApp
 {
@@ -24,13 +22,13 @@ namespace MainApp
 	{
 		public Result Execute(ExternalCommandData cData, ref string message, ElementSet elements)
         {
+			var dataDirectories = new string[0];
+			var debugApp = false;
+
 			//set revit documents
-			DocPack.SetDocuments(cData);
+			var revit_info = ModelInfo.StoreDocuments(cData, dataDirectories, debugApp);
 
-			//spool up search system
-			MepSystemSearchCustom mssc = new MepSystemSearchCustom();
-
-			List<ElementId> jboxes = DocPack.UIDOC.Selection.GetElementIds().ToList();
+			List<ElementId> jboxes = revit_info.UIDOC.Selection.GetElementIds().ToList();
 
 			//fail if no boxes selected
 			if(!jboxes.Any())
@@ -46,7 +44,7 @@ namespace MainApp
 			List<ElementId> boxesFiltered = new List<ElementId>();
 			foreach(ElementId id in jboxes)
 			{
-				Element box = DocPack.DOC.GetElement(id);
+				Element box = revit_info.DOC.GetElement(id);
 				if (box.Category.Name != "Electrical Fixtures") continue;
 				if (String.IsNullOrWhiteSpace(box.LookupParameter("From").AsString()) ||
 					String.IsNullOrWhiteSpace(box.LookupParameter("To").AsString())) continue;
@@ -54,7 +52,7 @@ namespace MainApp
 			}
 
 			//check for parameters and quit if null
-			Element testBox = DocPack.DOC.GetElement(boxesFiltered.First());
+			Element testBox = revit_info.DOC.GetElement(boxesFiltered.First());
 			if (testBox.LookupParameter("From") == null &&
 				testBox.LookupParameter("To") == null)
 			{
@@ -68,15 +66,15 @@ namespace MainApp
 			}
 
 			int successCnt = 0;
-			using (TransactionGroup tgx = new TransactionGroup(DocPack.DOC, "Swapping Parameters"))
+			using (TransactionGroup tgx = new TransactionGroup(revit_info.DOC, "Swapping Parameters"))
 			{
 				tgx.Start();
 				foreach(ElementId id in boxesFiltered)
 				{
-					using (Transaction tx = new Transaction(DocPack.DOC, "swapping parameters"))
+					using (Transaction tx = new Transaction(revit_info.DOC, "swapping parameters"))
 					{
 						tx.Start();
-						Element box = DocPack.DOC.GetElement(id);
+						Element box = revit_info.DOC.GetElement(id);
 						string From = box.LookupParameter("From").AsString();
 						string To = box.LookupParameter("To").AsString();
 						box.LookupParameter("From").Set(To);
