@@ -80,7 +80,7 @@
         },
         {
             "label": "MasterBuild",
-            "dependsOn": ["b2017", "b2018", "b2019", "b2020" ],
+            "dependsOn": ["b2017", "b2018", "b2019", "b2020", "b2021" ],
             "dependsOrder": "sequence",
             "group": {
                 "kind": "build",
